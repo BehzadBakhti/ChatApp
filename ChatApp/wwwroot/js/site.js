@@ -21,7 +21,6 @@ if (window.location.pathname === "/Chat") {
 
         socket.send(message);
 
-
     }
     window.addEventListener('beforeunload', function () {
         // Close the WebSocket when the user is leaving the page
