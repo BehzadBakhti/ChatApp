@@ -18,12 +18,20 @@ namespace ChatApp.Controllers
             return View();
         }
 
-        public IActionResult Privacy()
+        [HttpPost]
+        public IActionResult ProcessUser([FromForm] string username, [FromForm] string avatar)
         {
-            return View();
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                TempData["Error"] = "Username cannot be empty!";
+                return RedirectToAction("Index");
+            }
+
+            // Redirect to the Chat controller, passing the username
+            return RedirectToAction("Index", "Chat", new { username, avatar });
         }
 
-        public IActionResult Chat()
+        public IActionResult Privacy()
         {
             return View();
         }

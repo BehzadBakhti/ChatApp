@@ -1,14 +1,41 @@
-﻿@{
+﻿@using ChatApp.Controllers
+@{
     ViewData["Title"] = "Chat";
 }
 
 <head>
     <meta charset="UTF-8">
     <title>WebSocket Chat</title>
+
 </head>
 <body>
-<h1>WebSocket Chat</h1>
-<input id="messageInput" placeholder="Message" />
-<button onclick="sendMessage()">Send</button>
-<ul id="messagesList"></ul>
+
+
+
+    <div class="container text-center">
+        <div class="row border-5 border-primary">
+            <div class="col-3 p-3 border border-primary rounded-3">
+                <h3>Welcome @ViewData["Username"]</h3>
+                <p>Avatar, @ViewData["Avatar"]!</p>
+                <div id="userId" data-user-id="@ViewData["UserId"]" class="visually-hidden"></div>
+                <h3>Active Users:</h3>
+                <div id="userList" class="list-group">
+                    @foreach (var user in (List<User>)ViewData["ActiveUsers"]!)
+                    {
+                            <button onclick="openUserChat(@user.Id)" class="list-group-item">@user.Username (@user.Avatar)</button>
+                    }
+                </div>
+            </div>
+            <div class="col-9 p-3 border border-primary rounded-3">
+                <div class="row border border-primary rounded-3">
+                    <ul id="messagesList"></ul>
+                </div>
+                <div class="row border border-primary rounded-3">
+                    <input class="col form-text" id="messageInput" placeholder="Message" />
+                    <button class="col btn btn-secondary" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
 </body>
