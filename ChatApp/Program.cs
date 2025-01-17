@@ -1,6 +1,7 @@
 
 using System.Net.WebSockets;
 using System.Text;
+using ChatApp.Controllers;
 
 namespace ChatApp
 {
@@ -12,11 +13,12 @@ namespace ChatApp
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
-            var userService =new UserService();
+            var userService = new UserService();
 
             builder.Services.AddSingleton<IUserService>(userService);
             var chatHandler = new ChatWebSocketHandler(userService);
             builder.Services.AddSingleton(chatHandler);
+            builder.Services.AddSingleton<IChatService, ChatService>();
 
             var app = builder.Build();
             app.UseStaticFiles();

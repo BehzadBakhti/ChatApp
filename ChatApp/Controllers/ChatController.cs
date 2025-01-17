@@ -6,10 +6,13 @@ namespace ChatApp.Controllers;
 public class ChatController : Controller
 {
     private readonly IUserService _userService;
-    public ChatController(IUserService userService)
+    private readonly IChatService _chatService;
+    public ChatController(IUserService userService, IChatService chatService)
     {
         _userService = userService;
+        _chatService = chatService;
     }
+
     public IActionResult Index(string username, string avatar)
     {
         if (string.IsNullOrEmpty(username))
@@ -23,5 +26,13 @@ public class ChatController : Controller
         ViewData["UserId"] = newUserId;
         ViewData["ActiveUsers"] = activeUsers;
         return View();
+    }
+
+    [HttpGet]
+    public IActionResult GetUserChats(string userId)
+    {
+        // Simulate fetching chat messages from memory (or a database in the future)
+        var chats = _chatService.GetChatsForUser(userId); // Replace with your logic
+        return Json(chats);
     }
 }
