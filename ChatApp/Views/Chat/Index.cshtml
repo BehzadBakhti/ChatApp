@@ -15,12 +15,13 @@
                 <h3>Welcome @ViewData["Username"]</h3>
                 <p>Avatar, @ViewData["Avatar"]!</p>
                 <div id="thisUser" data-user-id="@ViewData["UserId"]" data-username="@ViewData["Username"]" class="visually-hidden"></div>
+                <div id="userListData" data-user-list="@JsonSerializer.Serialize(ViewData["ActiveUsers"])" class="visually-hidden"></div>
 
                 <h3>Active Users:</h3>
                 <div id="userList" class="list-group">
                     @foreach (var user in (List<User>)ViewData["ActiveUsers"]!)
                     {
-                        if (user.Id != (int)ViewData["UserId"]!)
+                        if (user.Id != (string)ViewData["UserId"]!)
                         {
                             <button class="list-group-item" onclick="openUserChat(@JsonSerializer.Serialize(user))">@user.Username (@user.Avatar)</button>
                         }

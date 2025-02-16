@@ -4,9 +4,9 @@ namespace ChatApp;
 
 public interface IUserService
 {
-    public Action<List<User>> OnUsersUpdated { get; set; }
-    int? AddUser(string username, string avatar);
-    void RemoveUser(int userId);
+    event Action<List<User>> OnUsersUpdated;
+    string? AddUser(string username, string avatar);
+    void RemoveUser(string userId);
     List<User> GetActiveUsers();
-    User? GetUser(int userId);
+    User? GetUser(string userId);
 }

@@ -2,6 +2,7 @@
 using System.Net.WebSockets;
 using System.Text;
 using ChatApp.Controllers;
+using ChatApp.Data;
 
 namespace ChatApp
 {
@@ -10,15 +11,15 @@ namespace ChatApp
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
+            var connString = builder.Configuration.GetConnectionString("ChatApp");
+            builder.Services.AddSqlite<ChatAppContext>(connString);
             // Add services to the container.
             builder.Services.AddControllersWithViews();
-            var userService = new UserService();
+           // var userService = new UserService();
 
-            builder.Services.AddSingleton<IUserService>(userService);
-            var chatHandler = new ChatWebSocketHandler(userService);
-            builder.Services.AddSingleton(chatHandler);
+            builder.Services.AddSingleton<IUserService, UserService>();
             builder.Services.AddSingleton<IChatService, ChatService>();
+            builder.Services.AddSingleton<ChatWebSocketHandler>();
 
             var app = builder.Build();
             app.UseStaticFiles();
@@ -37,6 +38,7 @@ namespace ChatApp
             app.MapControllerRoute(
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}");
+            app.MigrateDb();
 
             app.Run();
         }

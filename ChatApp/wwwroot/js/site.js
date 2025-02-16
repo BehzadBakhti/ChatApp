@@ -8,10 +8,13 @@ if (window.location.pathname === "/Chat") {
     const port = window.location.port ? `:${window.location.port}` : "";
     const thisUserId = document.getElementById("thisUser").dataset.userId;
     const thisUsername = document.getElementById("thisUser").dataset.username;
-    const socket = new WebSocket(`${protocol}${host}${port}/ws?userId=${thisUserId}`);
+    const socket = new WebSocket(`${protocol}${host}${port}/ws?userId=${thisUserId.toString()}`);
     const chatCache = new Map();
-    var usersData;
+    const _usersListData = new Map();
     var receiverId;
+    var ddd = document.getElementById("userListData").dataset.userList;
+    console.log(ddd)
+    updateUsersList(JSON.parse(ddd));
 
     socket.onopen = () => console.log("WebSocket connection established.");
     socket.onclose = (event) => {
@@ -28,15 +31,15 @@ if (window.location.pathname === "/Chat") {
         const socketMessage = JSON.parse(event.data);
 
         if (socketMessage.type === "USER_LIST") {
-            // Update active user list
-            console.log("Received user list:", socketMessage.data);
-            updateUsersList(socketMessage);
+            updateUsersList(socketMessage.data);
         } else if (socketMessage.type === "MESSAGE") {
-            // Handle incoming message
-            console.log("Received message:", socketMessage.data);
-            const li = document.createElement("li");
-            li.textContent = socketMessage.data.User.Username + ":" + socketMessage.data.Message;
-            document.getElementById("messagesList").appendChild(li);
+            var chatMessage = socketMessage.data;
+            if (chatMessage.SenderId == receiverId) {
+                addChatMessage(_usersListData.get(chatMessage.SenderId).Username, socketMessage.data.MessageBody, false);
+            }
+            else {
+                // Show a New message indicator On the UserName
+            }
         }
     };
 
@@ -57,6 +60,7 @@ if (window.location.pathname === "/Chat") {
         if (socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify(fullMessage));
             messageBox.value = "";
+            addChatMessage(thisUsername, messageBody, true)
             console.log("Message sent:", fullMessage);
         } else {
             console.error("WebSocket is not open. ReadyState:", socket.readyState);
@@ -69,7 +73,8 @@ if (window.location.pathname === "/Chat") {
     function openUserChat(user) {
         receiverId = user.Id.toString();
         const chatAreaInfo = document.getElementById("ChatAreaInfo")
-
+        const chatContainer = document.getElementById("messagesList");
+        chatContainer.innerHTML = ""; // Clear previous chats
         // Check if chats are already cached
         if (chatCache.has(user.Id)) {
             console.log("Loading chats from cache...");
@@ -77,13 +82,16 @@ if (window.location.pathname === "/Chat") {
         } else {
             console.log("Fetching chats from server...");
 
-            fetch(`/Chat/GetUserChats?userId=${user.Id}`)
+            fetch(`/Chat/GetUserChats?myUserId=${thisUserId}&otherUserId=${user.Id}`)
                 .then(response => response.json())
                 .then(data => {
                     // Cache the chats
-                    chatCache.set(user.Id, data);
-                    // Display the chats
-                    displayChats(user.Id, user.Username, data);
+                    if (data != null) {
+                        chatCache.set(user.Id, data);
+                        // Display the chats
+                        displayChats(user.Id, user.Username, data);
+                    }
+
                     document.getElementById("sendMessageBtn").disabled = false;
                 })
                 .catch(error => {
@@ -94,9 +102,7 @@ if (window.location.pathname === "/Chat") {
     }
 
     function displayChats(userId, username, chats) {
-        const chatContainer = document.getElementById("messagesList");
 
-        chatContainer.innerHTML = ""; // Clear previous chats
 
         chats.forEach(chat => {
             const senderName = userId == chat.senderId ? username : thisUsername;
@@ -111,14 +117,14 @@ if (window.location.pathname === "/Chat") {
         }
     });
 
-    function updateUsersList(socketMessage) {
+    function updateUsersList(usersListData) {
 
-        usersData = socketMessage.data;
         const userList = document.getElementById('userList');
 
         userList.innerHTML = ''; // Clear the list
-        socketMessage.data.forEach(user => {
-            console.log(user.Id + " ===" + thisUserId);
+        _usersListData.clear();
+        usersListData.forEach(user => {
+            _usersListData.set(user.Id, user);
             if (user.Id == thisUserId)
                 return;
             const button = document.createElement('button');

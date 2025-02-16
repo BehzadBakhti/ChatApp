@@ -2,6 +2,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ChatApp.Controllers;
 
 namespace ChatApp;
 
@@ -10,12 +11,14 @@ public class ChatWebSocketHandler
     private readonly List<WebSocket> _activeSockets = new();
     private readonly Dictionary<string, WebSocket> _userSockets = new();
     private readonly IUserService _userService;
+    private readonly IChatService _chatService;
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
-    public ChatWebSocketHandler(IUserService userService)
+    public ChatWebSocketHandler(IUserService userService, IChatService chatService)
     {
         _userService = userService;
-        _userService.OnUsersUpdated = async (updatedUsers) =>
+        _chatService = chatService;
+        _userService.OnUsersUpdated += async (updatedUsers) =>
         {
             var updateMessage = JsonSerializer.Serialize(new { type = "USER_LIST", data = updatedUsers });
             await BroadcastMessageAsync(updateMessage);
@@ -42,22 +45,22 @@ public class ChatWebSocketHandler
         _userSockets[userId] = webSocket;
         _activeSockets.Add(webSocket);
 
-         var buffer = new byte[1024 * 4];
+        var buffer = new byte[1024 * 4];
         var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 
         while (!result.CloseStatus.HasValue)
         {
             var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-
-            Console.WriteLine("Message:" + message);
             var socketMessage = JsonSerializer.Deserialize<SocketMessage>(message);
-            Console.WriteLine("MessageType:" + socketMessage?.Action);
+
             switch (socketMessage?.Action)
             {
                 case "Message":
                     var chatMessage = JsonSerializer.Deserialize<ChatMessage>(socketMessage.Payload);
                     if (chatMessage != null)
-                        await SendMessagesAsync(chatMessage);
+                    {
+                        await DeliverMessagesAsync(chatMessage);
+                    }
                     break;
                 case "NewChatRoom":
                     break;
@@ -71,7 +74,7 @@ public class ChatWebSocketHandler
         await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
         _userSockets.Remove(userId);
         _activeSockets.Remove(webSocket);
-        _userService.RemoveUser(int.Parse(userId));
+        _userService.RemoveUser(userId);
     }
 
     private async Task BroadcastMessageAsync(string message)
@@ -83,16 +86,16 @@ public class ChatWebSocketHandler
         {
             foreach (var socket in _activeSockets)
             {
-                if (socket.State == WebSocketState.Open)
+                if (socket.State != WebSocketState.Open) 
+                    continue;
+                
+                try
                 {
-                    try
-                    {
-                        await socket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, CancellationToken.None);
-                    }
-                    catch (Exception ex)
-                    {
-                        // Log the exception or handle it as needed
-                    }
+                    await socket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    // Log the exception or handle it as needed
                 }
             }
         }
@@ -102,19 +105,14 @@ public class ChatWebSocketHandler
         }
     }
 
-
-private async Task SendMessagesAsync(ChatMessage chatMessage)
+    private async Task DeliverMessagesAsync(ChatMessage chatMessage)
     {
         if (_userSockets.TryGetValue(chatMessage.ReceiverId, out var receiverSocket))
         {
             var socketMessage = new
             {
                 type = "MESSAGE",
-                data = new
-                {
-                    User = _userService.GetUser(int.Parse(chatMessage.SenderId)),
-                    Message = chatMessage.MessageBody
-                }
+                data = chatMessage
             };
 
             try
@@ -130,23 +128,6 @@ private async Task SendMessagesAsync(ChatMessage chatMessage)
                 // Log the exception or handle it as needed
             }
         }
+        _chatService.AddChatMessage(chatMessage);
     }
 }
-
-public class ChatMessage
-{
-    public required string SenderId { get; set; }
-    public required string ReceiverId { get; set; }
-    public required string? MessageBody { get; set; }
-    //public DateTime TimeStamp { get; set; }
-}
-
-public class SocketMessage
-{
-    public string Action { get; set; }
-    public string Payload { get; set; }
-}
-
-
-
-

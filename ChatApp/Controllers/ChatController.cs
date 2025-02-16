@@ -29,10 +29,10 @@ public class ChatController : Controller
     }
 
     [HttpGet]
-    public IActionResult GetUserChats(string userId)
+    public IActionResult GetUserChats(string myUserId, string otherUserId)
     {
         // Simulate fetching chat messages from memory (or a database in the future)
-        var chats = _chatService.GetChatsForUser(userId); // Replace with your logic
+        var chats = _chatService.GetChatsForUser(myUserId, otherUserId);
         return Json(chats);
     }
 }
